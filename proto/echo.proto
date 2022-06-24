@@ -8,8 +8,7 @@ message TextParam {
   string text = 1;
 }
 
-
-
+// API of the echo service
 service EchoService {
   // Return an copy of the text
   rpc Echo(TextParam) returns (TextParam);

@@ -28,22 +28,24 @@ help: ## Show this help
 
 
 run1: echo-cli echo-service ## Run echo gRPC service without dapr
-	bin/echo-service&
-	bin/echo-cli "Hello gRPC only"
-	bin/echo-cli "stop"
+	@bin/echo-service&
+	@bin/echo-cli "upper" "Hello gRPC"
+	@bin/echo-cli "stop"
 
 run2: echo-cli echo-service ## Run echo service via dapr and use the gRPC client to call the service via dapr
-	dapr run --enable-api-logging --log-level debug \
+	@dapr run --enable-api-logging \
 		--app-protocol grpc --app-port $(SERVICE_GRPC_PORT) \
-		--app-id directory \
-		--dapr-http-port $(DAPR_HTTP_PORT) --dapr-grpc-port $(DAPR_GRPC_PORT)  --  dist/bin/directory-svc
-	bin/echo-cli "Hello gRPC via dapr gRPC"
-	bin/echo-cli "stop"
+		--app-id echo \
+		--dapr-http-port $(DAPR_HTTP_PORT) --dapr-grpc-port $(DAPR_GRPC_PORT)  --  bin/echo-service &
+	@bin/echo-cli -port $(DAPR_GRPC_PORT) upper "Hello gRPC via dapr gRPC"
+	@bin/echo-cli -port $(DAPR_GRPC_PORT) "stop"
 
-run3: echo-service ## Run echo service via dapr and use curl to invoke the http API
-	dapr run --enable-api-logging --log-level debug \
+run3: echo-cli echo-service ## Run echo service via dapr and use curl to invoke the http API
+	@dapr run --enable-api-logging \
 		--app-protocol grpc --app-port $(SERVICE_GRPC_PORT) \
-		--app-id directory \
-		--dapr-http-port $(DAPR_HTTP_PORT) --dapr-grpc-port $(DAPR_GRPC_PORT)  --  dist/bin/directory-svc
-	curl GET localhost:$(DAPR_HTTP_PORT)/echo/Hello.via.dapr.http
-	bin/echo-cli "stop"
+		--app-id echo \
+		--dapr-http-port $(DAPR_HTTP_PORT) --dapr-grpc-port $(DAPR_GRPC_PORT)  --  bin/echo-service &
+	@sleep 2
+	@curl localhost:$(DAPR_HTTP_PORT)/v1.0/invoke/echo/method/upper -d "Hello world" -X PUT
+	@echo
+	@curl localhost:$(DAPR_HTTP_PORT)/v1.0/invoke/echo/method/stop -X PUT

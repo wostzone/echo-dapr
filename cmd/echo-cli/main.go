@@ -15,28 +15,34 @@ import (
 	pb "github.com/wostzone/echo/proto/go"
 )
 
+// ServiceName used by the service when connecting via dapr
 const ServiceName = "echo"
 
 const (
-// the default dapr instance
-//address = "localhost:40001"
-//daprHttpAddress    = "localhost:9000"
-//daprGrpcAddress    = "localhost:9001"
+	// the default dapr instance
+	//address = "localhost:40001"
+	//daprHttpAddress    = "localhost:9000"
+	defaultGrpcPort = "40001"
 )
 
 // Client used to invoke the grpc echo service
 func main() {
-	grpcServicePort := *flag.String("port", "40001", "gRPC port to connect to the echo service")
-	cmd := *flag.String("cmd", "echo", "Command: echo, reverse, upper or stop")
+	var text = "Hello echo"
+	var grpcServicePort = "9001"
+	var cmd string
+	flag.StringVar(&grpcServicePort, "port", defaultGrpcPort, "gRPC port to connect to the echo service")
 	flag.Parse()
 	values := flag.Args()
-	if len(values) < 2 {
-		fmt.Println("Missing text: echo-cli <command> <text>")
+	if len(values) == 0 {
+		fmt.Println("Missing text: echo-cli <command> <text>: ", cmd)
 		flag.Usage()
 		return
+	} else if len(values) == 1 && values[0] == "stop" {
+		cmd = values[0]
+	} else {
+		cmd = values[0]
+		text = values[1]
 	}
-	cmd = values[0]
-	text := values[1]
 
 	directGrpc(grpcServicePort, cmd, text)
 	//usingInvoke()
@@ -72,6 +78,7 @@ func directGrpc(port string, cmd string, text string) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
 	defer cancel()
 
+	// The service name to connect to when connecting via dapr
 	ctx = metadata.AppendToOutgoingContext(ctx, "dapr-app-id", ServiceName)
 
 	if cmd == "echo" {
@@ -88,6 +95,6 @@ func directGrpc(port string, cmd string, text string) {
 	if err != nil {
 		log.Fatalf("Could not echo text: %v", err)
 	} else if response != nil {
-		log.Printf("Echo: %v", response.GetText())
+		log.Printf(response.GetText())
 	}
 }

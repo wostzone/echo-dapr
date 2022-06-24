@@ -7,8 +7,9 @@ import (
 	commonv1pb "github.com/dapr/dapr/pkg/proto/common/v1"
 	pb "github.com/dapr/go-sdk/dapr/proto/runtime/v1"
 	"github.com/golang/protobuf/ptypes/empty"
-	"github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/types/known/anypb"
+
+	echo "github.com/wostzone/echo/proto/go"
 )
 
 // DAPR pub/sub handlers for the service
@@ -23,14 +24,29 @@ import (
 
 // OnInvoke to test invocation via dapr HTTP???
 func (service *EchoService) OnInvoke(ctx context.Context, in *commonv1pb.InvokeRequest) (*commonv1pb.InvokeResponse, error) {
-	fmt.Println("OnInvoke")
+	fmt.Println("OnInvoke. Method ", in.Method)
 
-	logrus.Warnf("OnInvoke called. method:", in.Method)
 	var response string
 
+	// Convert the http parameters to grpc parameter for use by the service
 	switch in.Method {
-	case "EchoMethod":
-		response = "pong"
+	case "echo":
+		params := echo.TextParam{Text: in.Data.String()}
+		out, _ := service.Echo(ctx, &params)
+		response = out.Text
+	case "upper":
+		params := echo.TextParam{Text: in.Data.String()}
+		out, _ := service.UpperCase(ctx, &params)
+		response = out.Text
+	case "reverse":
+		params := echo.TextParam{Text: in.Data.String()}
+		out, _ := service.Reverse(ctx, &params)
+		response = out.Text
+	case "stop":
+		service.Stop(ctx, &empty.Empty{})
+		response = "stopped"
+	default:
+		fmt.Println("ignored unknown method: " + in.Method)
 	}
 	return &commonv1pb.InvokeResponse{
 		ContentType: "text/plain; charset=UTF-8",
@@ -45,6 +61,9 @@ func (service *EchoService) ListTopicSubscriptions(ctx context.Context, in *empt
 	return &pb.ListTopicSubscriptionsResponse{
 		Subscriptions: []*pb.TopicSubscription{
 			{Topic: "echo"},
+			{Topic: "upper"},
+			{Topic: "reverse"},
+			{Topic: "stop"},
 		},
 	}, nil
 }

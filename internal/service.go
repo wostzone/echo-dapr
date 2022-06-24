@@ -3,6 +3,7 @@ package internal
 import (
 	"context"
 	"strings"
+	"time"
 
 	dapr "github.com/dapr/go-sdk/dapr/proto/runtime/v1"
 	"github.com/golang/protobuf/ptypes/empty"
@@ -11,11 +12,12 @@ import (
 	pb "github.com/wostzone/echo/proto/go"
 )
 
+// EchoService demonstrates how to build a microservice using dapr for pub/sub and http invocation.
 type EchoService struct {
 	pb.UnimplementedEchoServiceServer
 	dapr.UnimplementedAppCallbackServer
 
-	// grpc server used to stop the service
+	// keep the grpc server used to stop the service
 	grpcServer *grpc.Server
 }
 
@@ -40,9 +42,12 @@ func (service *EchoService) Reverse(ctx context.Context, args *pb.TextParam) (*p
 	return &response, nil
 }
 
-// Stop the service
+// Stop the service, give it some time for a response
 func (service *EchoService) Stop(ctx context.Context, args *empty.Empty) (*pb.TextParam, error) {
-	go service.grpcServer.Stop()
+	go func() {
+		time.Sleep(time.Millisecond * 100)
+		service.grpcServer.Stop()
+	}()
 	response := pb.TextParam{Text: "Stopped"}
 	return &response, nil
 }
