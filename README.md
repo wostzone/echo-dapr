@@ -6,12 +6,12 @@ This service is intended as an example on how to write a microservice using gRPC
 a [dapr](https://docs.dapr.io/) environment. The service is written in golang and can be invoked via
 dapr gRPC and http endpoints.
 
-This project includes 3 demonstrations:
+This project includes the following demonstrations:
 
 1. How to write and invoke a gRPC service in golang using a protobuffers for API definition
 2. How to invoke the service using dapr
 3. How to extend the service with the dapr SDK to allow invocation via the dapr HTTP endpoint
-4. How to extend the service with the dapr SDK to allow invocation via the dapr pub/sub
+4. How to extend the service with the dapr SDK to allow invocation via the dapr pub/sub (todo)
 
 Wishlist:
 
@@ -28,12 +28,38 @@ Project structure :
 
 ## Prerequisites
 
-Self hosted installation of dapr.
+* Self hosted installation of dapr
+* Golang 1.18 or newer
 
-## Writing a gRPC service
+## Demos
 
-## Invoking a gRPC service
+### Run the demos
 
-## Extend the service to support dapr HTTP endpoint
+Build and run the echo service using gRPC: echo-client/grpc -> echo-service/grpc
+> make run1
 
-## Extend the service to respond to pub/sub requests
+Build and run the echo service with dapr and invoke using gRPC:
+echo-client/grpc -> dapr/grpc (sidecart) -> echo-service/grpc
+> make run2
+
+Build and run the echo service using dapr and invoke via curl:
+curl/http -> dapr/http -> dapr/grpc (sidecart) -> echo-service/grpc)
+> make run3
+
+### Running the echo service via dapr
+
+Launch the service using dapr. Dapr listens on GRPC port 9000
+> dapr run --enable-api-logging
+> --app-protocol grpc --app-port 40001 --app-id echo
+> --dapr-http-port 9000 --dapr-grpc-port 9001 -- bin/echo-service &
+
+to stop:
+> dapr stop --app-id echo
+
+### Invoke the service via gRPC
+
+> bin/echo-cli -port 9001 upper "Hello gRPC via dapr gRPC"
+
+### Invoke the service via curl
+
+> curl localhost:9000/v1.0/invoke/echo/method/upper -d "Hello world" -X PUT
