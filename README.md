@@ -1,10 +1,8 @@
-# echo
+# echo-dapr
 
-Echo demonstration service using gRPC and dapr
+Echo demonstration service in golang using dapr with gRPC and HTTP invocation.
 
-This service is intended as an example on how to write a microservice using gRPC in
-a [dapr](https://docs.dapr.io/) environment. The service is written in golang and can be invoked via
-dapr gRPC and http endpoints.
+This service is intended as an exploration in how to write and use microservice in a [dapr](https://docs.dapr.io/) environment, using gRPC and HTTP.
 
 This project includes the following demonstrations:
 
@@ -20,8 +18,8 @@ Wishlist:
 
 Project structure :
 | bin/ - service and client binaries from make all
-| cmd/ - source code of commands for the service and the client  
 | internal/ - source code of the echo service
+| pkg/ - source code of client and service for various invocation methods  
 | proto/ - gRPC api definition in protobuffer and generated go API source
 | go.mod - go dependencies
 | Makefile - build and run the demo
@@ -33,33 +31,20 @@ Project structure :
 
 ## Demos
 
-### Run the demos
+See each of the demo README's for details
 
-Build and run the echo service using gRPC: echo-client/grpc -> echo-service/grpc
-> make run1
+Completed:
 
-Build and run the echo service with dapr and invoke using gRPC:
-echo-client/grpc -> dapr/grpc (sidecart) -> echo-service/grpc
-> make run2
+* invoke-grpc/README.md) - invoke service with grpc with/without dapr
+* invoke-http/README.md - invoke service with http with/without dapr
 
-Build and run the echo service using dapr and invoke via curl:
-curl/http -> dapr/http -> dapr/grpc (sidecart) -> echo-service/grpc)
-> make run3
+In progress:
 
-### Running the echo service via dapr
+* invoke-dapr-grpc/README.md - invoke service with grpc using dapr golang SDK
+* invoke-http-grpc/README.md - invoke service with http using dapr golang SDK
 
-Launch the service using dapr. Dapr listens on GRPC port 9000
-> dapr run --enable-api-logging
-> --app-protocol grpc --app-port 40001 --app-id echo
-> --dapr-http-port 9000 --dapr-grpc-port 9001 -- bin/echo-service &
+Planned:
 
-to stop:
-> dapr stop --app-id echo
-
-### Invoke the service via gRPC
-
-> bin/echo-cli -port 9001 upper "Hello gRPC via dapr gRPC"
-
-### Invoke the service via curl
-
-> curl localhost:9000/v1.0/invoke/echo/method/upper -d "Hello world" -X PUT
+* pubsub-grpc/README.md - invoke service with pubsub over grpc
+* pubsub-http/README.md - invoke service with pubsub over http
+* invoke-grpc-http/README.md - invoke the grpc service via http
