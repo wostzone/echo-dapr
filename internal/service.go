@@ -2,51 +2,65 @@ package internal
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
-	dapr "github.com/dapr/go-sdk/dapr/proto/runtime/v1"
 	"github.com/golang/protobuf/ptypes/empty"
-	"google.golang.org/grpc"
 
 	pb "github.com/wostzone/echo/proto/go"
 )
 
-// EchoService demonstrates how to build a microservice using dapr for pub/sub and http invocation.
+// EchoService demonstrates how to build a microservice for grpc, pub/sub and http invocation.
 type EchoService struct {
 	pb.UnimplementedEchoServiceServer
-	dapr.UnimplementedAppCallbackServer
 
-	// keep the grpc server used to stop the service
-	grpcServer *grpc.Server
+	// handle stop request
+	stopHandler func()
 }
 
 //--- EchoService methods
 
 func (service *EchoService) Echo(ctx context.Context, args *pb.TextParam) (*pb.TextParam, error) {
+	if args == nil {
+		return nil, fmt.Errorf("Missing args")
+	}
+	fmt.Println("EchoService.Echo: ", args.Text)
 	return args, nil
 }
 
 func (service *EchoService) UpperCase(ctx context.Context, args *pb.TextParam) (*pb.TextParam, error) {
+	if args == nil {
+		return nil, fmt.Errorf("Missing args")
+	}
 	upper := strings.ToUpper(args.Text)
 	response := pb.TextParam{Text: upper}
+	fmt.Println("EchoService.UpperCase: ", response.Text)
 	return &response, nil
 }
 
 func (service *EchoService) Reverse(ctx context.Context, args *pb.TextParam) (*pb.TextParam, error) {
+	if args == nil {
+		return nil, fmt.Errorf("Missing args")
+	}
 	rns := []rune(args.Text)
 	for i, j := 0, len(rns)-1; i < j; i, j = i+1, j-1 {
 		rns[i], rns[j] = rns[j], rns[i]
 	}
 	response := pb.TextParam{Text: string(rns)}
+	fmt.Println("EchoService.Reverse: ", response.Text)
 	return &response, nil
 }
 
 // Stop the service, give it some time for a response
 func (service *EchoService) Stop(ctx context.Context, args *empty.Empty) (*pb.TextParam, error) {
+	fmt.Println("EchoService.Stop")
+
 	go func() {
 		time.Sleep(time.Millisecond * 100)
-		service.grpcServer.Stop()
+		if service.stopHandler != nil {
+			service.stopHandler()
+		}
 	}()
 	response := pb.TextParam{Text: "Stopped"}
 	return &response, nil
@@ -73,8 +87,8 @@ func (service *EchoService) Stop(ctx context.Context, args *empty.Empty) (*pb.Te
 //}
 
 // NewEchoService creates and registers the service with gRPC interface
-// grpcServer is used to stop the service
-func NewEchoService(grpcServer *grpc.Server) *EchoService {
-	service := &EchoService{grpcServer: grpcServer}
+// onShutDown callback is used to handle stop request
+func NewEchoService(stopHandler func()) *EchoService {
+	service := &EchoService{stopHandler: stopHandler}
 	return service
 }
