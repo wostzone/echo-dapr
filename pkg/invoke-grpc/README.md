@@ -1,4 +1,4 @@
-# Invoke GRPC
+# Invoke with gRPC without SDK
 
 This example shows how to invoke a gRPC service that is developed without dependency on dapr, but can interoperate with dapr using gRPC.
 

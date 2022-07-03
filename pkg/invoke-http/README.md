@@ -1,4 +1,4 @@
-# Invoke HTTP
+# Invoke with HTTP without SDK
 
 This example shows how to invoke a HTTP service that is developed without dependency on dapr, but can interoperate with dapr using http.
 
@@ -73,7 +73,8 @@ go run client/main.go --port 9002 --app-id echo "stop"
 
 > client -[http]-> client-sidecar -[grpc]-> service sidecar -[http]-> service
 
-Note: this requires the 'dapr-app-id' metadata field set in the client to the name of the service to invoke:
+Note: this requires the 'dapr-app-id' metadata field set in the client to the name of the service to invoke.
+
 > req.Header.Add("dapr-app-id", "order-processor")
 
 When to use:

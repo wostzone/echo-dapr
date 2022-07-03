@@ -1,4 +1,3 @@
-// Package main that launches the directory service on localhost
 package main
 
 import (
