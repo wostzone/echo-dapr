@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 
 	"github.com/gorilla/mux"
@@ -30,10 +31,19 @@ func main() {
 func StartHttpService(port int) {
 	fmt.Println("Starting echo-service on http port ", port)
 	r := mux.NewRouter()
+	r.HandleFunc("/stop", handleStop)
 	r.HandleFunc("/echo", handleEcho).Methods("POST")
 	r.HandleFunc("/upper", handleUpper).Methods("POST")
 	r.HandleFunc("/reverse", handleReverse).Methods("POST")
-	_ = http.ListenAndServe(":"+strconv.Itoa(port), r)
+	err := http.ListenAndServe(":"+strconv.Itoa(port), r)
+	if err != nil {
+		fmt.Println(fmt.Errorf("StartHttpService. Error: %s", err))
+	}
+}
+
+func handleStop(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("Stopping plain-http service")
+	go os.Exit(0)
 }
 
 func handleEcho(w http.ResponseWriter, r *http.Request) {

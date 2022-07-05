@@ -18,7 +18,7 @@ func main() {
 	var text = "Hello echo"
 	var appID = pkg.EchoServiceAppID
 	var cmd string
-	var repeat int = 10
+	var repeat int = 1
 	flag.IntVar(&repeat, "repeat", repeat, "Nr of times to invoke")
 	flag.StringVar(&appID, "app-id", pkg.EchoServiceAppID, "Service app-id to invoke")
 	flag.Parse()

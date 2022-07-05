@@ -6,7 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"strconv"
+	"time"
 
 	dapr "github.com/dapr/go-sdk/client"
 
@@ -18,8 +18,8 @@ func main() {
 	var text = "Hello echo"
 	var appID = pkg.EchoServiceAppID
 	var cmd string
-	var port int
-	flag.IntVar(&port, "port", pkg.EchoDaprClientHttpPort, "client sidecar http listening port")
+	var repeat int = 1
+	flag.IntVar(&repeat, "repeat", repeat, "Nr of times to invoke")
 	flag.StringVar(&appID, "app-id", pkg.EchoServiceAppID, "Service app-id to invoke")
 	flag.Parse()
 	values := flag.Args()
@@ -33,14 +33,13 @@ func main() {
 		flag.Usage()
 		return
 	}
-
-	InvokeHttpServiceWithSDK(port, appID, cmd, text)
+	InvokeHttpServiceWithSDK(appID, cmd, text, repeat)
 }
 
 // InvokeHttpServiceWithSDK invokes a service using the dapr sdk. See also:
 //  https://docs.dapr.io/developing-applications/building-blocks/service-invocation/howto-invoke-discover-services/
-func InvokeHttpServiceWithSDK(clientPort int, appID string, cmd string, text string) {
-	fmt.Println("Invoking echo service over http on :"+strconv.Itoa(clientPort), "command: ", cmd)
+func InvokeHttpServiceWithSDK(appID string, cmd string, text string, repeat int) {
+	fmt.Println(fmt.Sprintf("Invoking command '%s' on service '%s'", cmd, appID))
 	message := pb.TextParam{Text: text}
 	data, _ := json.Marshal(message)
 
@@ -59,10 +58,16 @@ func InvokeHttpServiceWithSDK(clientPort int, appID string, cmd string, text str
 	}
 	defer client.Close()
 	ctx := context.Background()
-	resp, err := client.InvokeMethodWithContent(ctx, appID, cmd, "post", content)
-	if err != nil {
-		msg := fmt.Sprintf("Error invoking method '%s' on app '%s': %s", cmd, appID, err)
-		log.Println(msg)
+	t1 := time.Now()
+	for count := 0; count < repeat; count++ {
+		resp, err := client.InvokeMethodWithContent(ctx, appID, cmd, "post", content)
+		if err != nil {
+			msg := fmt.Sprintf("Error invoking method '%s' on app '%s': %s", cmd, appID, err)
+			log.Println(msg)
+		}
+		fmt.Println("Response:", string(resp))
 	}
-	fmt.Println("Response:", string(resp))
+	t2 := time.Now()
+	duration := t2.Sub(t1)
+	fmt.Println("Time to invoke: ", duration.Milliseconds(), "msec")
 }

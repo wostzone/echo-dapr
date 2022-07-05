@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 
 	"github.com/dapr/go-sdk/service/common"
@@ -40,6 +41,9 @@ func StartHttpService(port int) {
 	//service := daprd.NewService(":" + strconv.Itoa(port))
 
 	// the invocation handler is http/grpc agnostic
+	if err := service.AddServiceInvocationHandler("stop", stopInvocationHandler); err != nil {
+		log.Fatalf("error adding invocation handler: %v", err)
+	}
 	if err := service.AddServiceInvocationHandler("echo", echoInvocationHandler); err != nil {
 		log.Fatalf("error adding invocation handler: %v", err)
 	}
@@ -47,6 +51,17 @@ func StartHttpService(port int) {
 	if err := service.Start(); err != nil && err != http.ErrServerClosed {
 		log.Fatalf("error: %v", err)
 	}
+}
+
+// stopInvocationHandler uses the dapr invocation API. It is just another way to handle request/response
+func stopInvocationHandler(ctx context.Context, in *common.InvocationEvent) (out *common.Content, err error) {
+	go os.Exit(0)
+	out = &common.Content{
+		Data:        []byte("bye bye"),
+		ContentType: in.ContentType,
+		DataTypeURL: in.DataTypeURL,
+	}
+	return out, nil
 }
 
 // echoInvocationHandler uses the dapr invocation API. It is just another way to handle request/response

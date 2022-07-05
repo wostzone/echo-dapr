@@ -41,36 +41,47 @@ help: ## Show this help
 	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
 
-run1: echo-cli echo-service ## Run echo gRPC service without dapr
-	@bin/echo-service&
-	@bin/echo-cli "upper" "Hello gRPC"
-	@bin/echo-cli "stop"
+run1:  ## Run plain echo gRPC service without dapr
+	go run pkg/plain-grpc/service/main.go &
+	go run pkg/plain-grpc/client/main.go --repeat 1000 "upper" "Hello gRPC"
+	go run pkg/plain-grpc/client/main.go "stop"
 
-run2: echo-cli echo-service ## Run echo service via dapr: client->dapr[40002]->dapr[echo]->service[40001]
-	dapr run --enable-api-logging \
-		--app-protocol grpc --app-port $(SERVICE_GRPC_PORT) \
-		--app-id echo \
-		--dapr-http-port $(DAPR_HTTP_PORT) --dapr-grpc-port $(DAPR_GRPC_PORT)  --  bin/echo-service &
-	@#bin/echo-cli -port $(DAPR_GRPC_PORT) upper "Hello gRPC via dapr client gRPC"
-	@dapr run --dapr-grpc-port=40002  -- bin/echo-cli -port 40002 upper "hello via client->dapr->dapr->service"
-	@bin/echo-cli -port $(DAPR_GRPC_PORT) "stop"
+run2:  ## Run plain echo http service without dapr
+	go run pkg/plain-http/service/main.go &
+	go run pkg/plain-http/client/main.go --repeat 1000 "upper" "Hello http"
+	sleep 1
+	go run pkg/plain-http/client/main.go "stop"
 
-run3: echo-cli echo-service ## Run echo service via dapr and use curl to invoke the http API
-	@dapr run --enable-api-logging \
-		--app-protocol grpc --app-port $(SERVICE_GRPC_PORT) \
-		--app-id echo \
-		--dapr-http-port $(DAPR_HTTP_PORT) --dapr-grpc-port $(DAPR_GRPC_PORT)  --  bin/echo-service &
-	@sleep 2
-	@curl localhost:$(DAPR_HTTP_PORT)/v1.0/invoke/echo/method/upper -d "Hello world" -X PUT
-	@echo
-	@curl localhost:$(DAPR_HTTP_PORT)/v1.0/invoke/echo/method/stop -X PUT
+run3: ## Run echo gRPC service with dapr sidecars
+	dapr run --app-protocol grpc --app-port 40001 \
+		--app-id echo --dapr-grpc-port 9001 \
+		-- go run pkg/plain-grpc/service/main.go --port 40001&
+	dapr run --dapr-grpc-port=9002  -- \
+		go run pkg/plain-grpc/client/main.go --port 9002 --repeat 1000 echo "Hello gRPC2"
+	go run pkg/plain-grpc/client/main.go "stop"
 
-run4: echo-cli echo-service ## Run echo service via dapr pub/sub
-	@dapr run --enable-api-logging \
-		--app-protocol grpc --app-port $(SERVICE_GRPC_PORT) \
-		--app-id echo \
-		--dapr-http-port $(DAPR_HTTP_PORT) --dapr-grpc-port $(DAPR_GRPC_PORT)  --  bin/echo-service &
-	@sleep 2
-	#// todo@curl localhost:$(DAPR_HTTP_PORT)/v1.0/invoke/echo/method/upper -d "Hello world" -X PUT
-	@echo
-	@curl localhost:$(DAPR_HTTP_PORT)/v1.0/invoke/echo/method/stop -X PUT
+run4: ## Run echo http service with dapr sidecars
+	dapr run --app-protocol http --app-port 40002 \
+		--app-id echo --dapr-http-port 9003 \
+		-- go run pkg/plain-http/service/main.go --port 40002&
+	dapr run --dapr-http-port=9004  -- \
+		go run pkg/plain-http/client/main.go --port 9004 --repeat 1000 echo "Hello http"
+	go run pkg/plain-http/client/main.go "stop"
+
+run5: ## Run echo gRPC service with invoke SDK
+	dapr run --app-protocol grpc --app-port 40001 \
+		--app-id echo --dapr-grpc-port 9001 -- \
+		go run pkg/invoke-grpc/service/main.go --port 40001&
+	dapr run --dapr-grpc-port=9002  -- \
+		go run pkg/invoke-grpc/client/main.go --repeat 1000 echo "Hello gRPC SDK"
+	dapr run --dapr-grpc-port=9002  -- \
+    	go run pkg/invoke-grpc/client/main.go "stop" >/dev/null
+
+run6: ## Run echo http service with invoke SDK
+	dapr run --app-protocol http --app-port 40002 \
+		--app-id echo --dapr-http-port 9003 \
+		-- go run pkg/invoke-http/service/main.go --port 40002&
+	dapr run --dapr-http-port=9004  -- \
+		go run pkg/invoke-http/client/main.go --repeat 1000 echo "Hello http SDK"
+	dapr run --dapr-http-port=9004  -- \
+		go run pkg/invoke-http/client/main.go "stop" >/dev/null

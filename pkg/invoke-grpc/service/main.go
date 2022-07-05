@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
 	"strconv"
 
 	"github.com/dapr/go-sdk/service/common"
@@ -58,6 +59,10 @@ func StartGrpcService(port int) {
 	}
 
 	// the invocation handler is http/grpc agnostic - otherwise, it is just a wrapper
+	if err := appcallbackServer.AddServiceInvocationHandler("stop", stopInvocationHandler); err != nil {
+		log.Fatalf("error adding invocation handler: %v", err)
+	}
+	// the invocation handler is http/grpc agnostic - otherwise, it is just a wrapper
 	if err := appcallbackServer.AddServiceInvocationHandler("echo", echoInvocationHandler); err != nil {
 		log.Fatalf("error adding invocation handler: %v", err)
 	}
@@ -69,6 +74,17 @@ func StartGrpcService(port int) {
 		log.Fatalf("error: %v", err)
 	}
 	fmt.Println("dapr appCallbackService listing on port ", port)
+}
+
+// stopInvocationHandler uses the dapr invocation API. It is just another way to handle request/response
+func stopInvocationHandler(ctx context.Context, in *common.InvocationEvent) (out *common.Content, err error) {
+	go os.Exit(0)
+	out = &common.Content{
+		Data:        []byte("bye bye"),
+		ContentType: in.ContentType,
+		DataTypeURL: in.DataTypeURL,
+	}
+	return out, nil
 }
 
 // echoInvocationHandler uses the dapr invocation API. It is just another way to handle request/response
