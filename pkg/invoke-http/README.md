@@ -1,98 +1,85 @@
-# Invoke with HTTP without SDK
+# Invoke with HTTP using dapr SDK
 
-This example shows how to invoke a HTTP service that is developed without dependency on dapr, but can interoperate with dapr using http.
+This example shows how to invoke a HTTP service that is developed using the dapr SDK. This is based on the [dapr SDK docs for Go](https://docs.dapr.io/developing-applications/sdks/go/go-client/).
 
-Use-case: Integrate dapr with existing HTTP services to use dapr's features.
+Use-case: Newly developed clients that invoke http services that run with a dapr sidecar. The sidecar supports dapr features such as logging, tracing, resiliency and other middleware. The use of pub/sub and bindings is described in the pubsub-http package.
 
 Pros:
 
-* Services can be developed, tested, and used with or without dapr.
-* Dapr features are available when invoking the service through the dapr sidecar proxy:
-    * Client can invoke the service using the application name. No need to know its port.
-    * Mutual authentication and api token based auth
-    * Tracing, logging, resiliency features.
+* Client does not need to know the addresses and ports of service or sidecar. Instead, the service app-id is used.
+* Use of dapr middleware services
 
 Cons:
 
-* Services can not be invoked via gRPC. Dapr does not convert gRPC to http/json. Developers must implement a separate gateway service that maps gRPC->http. This is not really a con when the HTTP API is for external clients only or looks different from the micro-service API.
-* Multiplies port usage: 1 port for the dapr client sidecar, 1 port for each service instance, and 1 port for each dapr sidecar. Eg a dapr client sidecar with 3 service instances requires 1+3*2 = 7 unique ports instead of 3 ports without dapr.
+* Overhead of using HTTP. Prefer the use of gRPC when possible.
 
-# Invocation Methods
+# Service Invocation Using The SDK
 
-(this is based on the current understanding of using dapr)
+Both client and service can use the SDK to implement dapr integration.
 
-## 1. Direct Client To Service
+> flow: client/sdk -[grpc?]-> service-sidecar -[http]-> service
 
-> client -[http]-> service
+### Client Integration
 
-This usage is simply a client->service invocation over HTTP. No dapr involved.
+Clients that use the dapr SDK InvokeMethod only need the name of the service. dapr manages the ports and resolves the service sidecar. The client must be invoked through the sidecart using 'dapr run'. Clients that use the SDK are therefore easier use than clients that don't as these need to be configured to talk to the sidecar port.
 
 When to use:
 
-* when using a single service instance, and
-* when the client knows the service port, and
-* when there are only a few services to manage, and
-* when you don't need dapr features such as logging, tracing, ...
+* When communicating with a http service that has a dapr sidecar, a client can use the sdk to easily invoke a method over http using the app-id and method name.
+
+Client code snippet ([full example code](client/main.go)):
+
+```go
+import dapr "github.com/dapr/go-sdk/client"
+client, err := dapr.NewClient()
+resp, err := client.InvokeMethod(ctx, "echo", "upper", "post")
+```
 
 How to run:
 
 ```bash
-go run service/main.go -port 40002 &
-go run client/main.go -port 40002 upper "Hello world"
-go run client/main.go -port 40002 stop
+dapr run -- go run client/main.go upper "Hello world"
 ```
 
-## 2. Indirect Client To Service Sidecar
+### Service Integration
 
-> client -[http]-> service-sidecar -[http]-> service
+There is no clear advantage in using the SDK for just service invocation handling. The SDK's 'service.AddServiceInvocationHandler' method does not have benefits over using a simple http.Server instance with a mux.HandleFunc will do the same.
 
-This usage does not use a client sidecar but simply invokes the service sidecar, which in turn invokes the service.
+However, when services also use pub/sub event invocation and binding invocation, the same dapr service instance can be used to add other the invocation handlers. Route names must be unique amongst all invocation methods, only the first name registered is used.
 
-Note: this requires the 'dapr-app-id' metadata field set in the client to the name of the service to invoke:
-> req.Header.Add("dapr-app-id", "order-processor")
+Service code snippet ([full example code](service/main.go)):
 
+```go
+import daprd "github.com/dapr/go-sdk/service/http"
 
-When to use:
+service := daprd.NewServiceWithMux(":"+strconv.Itoa(port), r)
+if err := service.AddServiceInvocationHandler("/echo", echoHandler); err != nil {
+log.Fatalf("error adding invocation handler: %v", err)
+}
 
-* when using a single service instance, and
-* when you want to use dapr features such as logging, tracing, ...
-
-How to run (ports are arbitrary):
-
-```sh
-dapr run --app-protocol http \
-	--app-port 40002 \
-	--app-id echo \
-	--dapr-http-port 9002 \
-	 --  go run service/main.go -port 40002 &
-go run client/main.go --port 9002 --app-id echo upper "Hello world"
-go run client/main.go --port 9002 --app-id echo "stop"
+func echoHandler(ctx context.Context, in *common.InvocationEvent) (out *common.Content, err error) {
+//...
+}
 ```
 
-## 3. Indirect Using Client Sidecar
+How to run:
 
-> client -[http]-> client-sidecar -[grpc]-> service sidecar -[http]-> service
-
-Note: this requires the 'dapr-app-id' metadata field set in the client to the name of the service to invoke.
-
-> req.Header.Add("dapr-app-id", "order-processor")
-
-When to use:
-
-* when the client doesn't know the server port, only the dapr client sidecar, or
-* when using multiple service instances with round-robin load balancing, and
-* when you want to use dapr features such as logging, tracing, ...
-
-How to run (ports are arbitrary):
-
-```sh
-dapr run --app-protocol http \
-	--app-port 40002 \
-	--app-id echo \
-	--dapr-http-port 9002 \
-	 --  go run service/main.go -port 40002 &
-dapr run --dapr-http-port 9003 \
-    -- go run client/main.go -port 9003 --app-id echo upper "Hello"
-dapr run --dapr-http-port 9003 \ 
-    -- go run client/main.go -port 9003 --app-id echo stop
+```bash
+dapr run --app-port 40002 --app-id echo --app-protocol http -- go run service/main.go -port 40002
 ```
+
+On a local network there is no need to assign a dapr http port as a dapr client sidecar will locate the server sidecar using dns. Dapr will auto-assign a port itself.
+
+## 2. Using curl As Client
+
+Since this is a http service, curl can be used as the client to invoke the service using its HTTP port. As no client sidecar is used, the service sidecar must have a HTTP port assigned. dapr uses a url format that includes the version, app-id, and method:
+
+```
+curl localhost:{port}/v1.0/invoke/{app-id}/method/{method-name} -d "{"text":"Hello world"}" -X POST
+```
+
+Where
+
+* {port} is the service sidecar port. For example "--dapr-http-port 9002"
+* {app-id} is the service application name, eg echo
+* {method-name} is the registered invocation handler, eg "echo", "upper", "reverse"

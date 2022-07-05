@@ -1,28 +1,26 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"log"
-	"net/http"
-	"os"
 	"strconv"
-	"strings"
+
+	dapr "github.com/dapr/go-sdk/client"
 
 	"github.com/wostzone/echo/pkg"
 	pb "github.com/wostzone/echo/proto/go"
 )
 
-// Client used to invoke the echo service over http using dapr
 func main() {
 	var text = "Hello echo"
 	var appID = pkg.EchoServiceAppID
 	var cmd string
 	var port int
-	flag.IntVar(&port, "port", pkg.EchoServiceHttpPort, "Service http listening port")
-	flag.StringVar(&appID, "app-id", pkg.EchoServiceAppID, "Service name when using dapr")
+	flag.IntVar(&port, "port", pkg.EchoDaprClientHttpPort, "client sidecar http listening port")
+	flag.StringVar(&appID, "app-id", pkg.EchoServiceAppID, "Service app-id to invoke")
 	flag.Parse()
 	values := flag.Args()
 	if len(values) == 1 && values[0] == "stop" {
@@ -36,35 +34,35 @@ func main() {
 		return
 	}
 
-	InvokeHttpService(port, appID, cmd, text)
+	InvokeHttpServiceWithSDK(port, appID, cmd, text)
 }
 
-// InvokeHttpService invokes the service with http using a dapr sidecar
-func InvokeHttpService(port int, appID string, cmd string, text string) {
-	fmt.Println("Invoking echo service over http on :"+strconv.Itoa(port), "command: ", cmd)
+// InvokeHttpServiceWithSDK invokes a service using the dapr sdk. See also:
+//  https://docs.dapr.io/developing-applications/building-blocks/service-invocation/howto-invoke-discover-services/
+func InvokeHttpServiceWithSDK(clientPort int, appID string, cmd string, text string) {
+	fmt.Println("Invoking echo service over http on :"+strconv.Itoa(clientPort), "command: ", cmd)
 	message := pb.TextParam{Text: text}
 	data, _ := json.Marshal(message)
 
-	client := &http.Client{}
-	url := "http://localhost:" + strconv.Itoa(port) + "/" + cmd
-	req, err := http.NewRequest("POST", url, strings.NewReader(string(data)))
-	if err != nil {
-		fmt.Print(err.Error())
-		os.Exit(1)
+	content := &dapr.DataContent{
+		ContentType: "application/json",
+		Data:        data,
 	}
-
-	// Invoking the service
-	// Set the service name to connect to when connecting via dapr
-	req.Header.Add("dapr-app-id", appID)
-	response, err := client.Do(req)
+	// This creates a dapr runtime able to connect to sidecars and access the state stores
+	// FYI, if you get context deadline exceeded error then the sidecar isnt running
+	//client, err := dapr.NewClientWithAddress("localhost:" + strconv.Itoa(clientPort))
+	client, err := dapr.NewClient()
 	if err != nil {
-		fmt.Print(err.Error())
-		os.Exit(1)
+		err2 := fmt.Errorf("error initializing client. Make sure this runs with a sidecart.: %s", err)
+		log.Println(err2)
+		return
 	}
-
-	result, err := ioutil.ReadAll(response.Body)
+	defer client.Close()
+	ctx := context.Background()
+	resp, err := client.InvokeMethodWithContent(ctx, appID, cmd, "post", content)
 	if err != nil {
-		log.Fatal(err)
+		msg := fmt.Sprintf("Error invoking method '%s' on app '%s': %s", cmd, appID, err)
+		log.Println(msg)
 	}
-	log.Println("Result: ", string(result))
+	fmt.Println("Response:", string(resp))
 }
