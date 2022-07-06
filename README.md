@@ -49,6 +49,12 @@ Planned:
 
 This is a very simplistic performance test comparing invocation times using best out of 3 runs.
 
+There are 3 types of tests, each with grpc and http:
+
+* plain calls are simple calls from a client directly to a service on localhost. Eg: client -> service
+* dapr wrapped calls use dapr sidecars with plain client and server. Eg: client -> sidecar -> sidecar -> service
+* in sdk calls the client and service use the dapr sdk to invoke and receive messages. This integration adds a dependency on the dapr sdk in return for perfomance gains and simplified port management.
+
 | Makefile | test                         | duration  |
 |----------|------------------------------|-----------|
 | run1     | 1000 plain grpc calls        | 164 msec  |
@@ -58,7 +64,6 @@ This is a very simplistic performance test comparing invocation times using best
 | run5     | 1000 grpc sdk calls          | 772 msec  |
 | run6     | 1000 http sdk calls          | 700 msec  |
 
-'wrapped calls' invoke the plain non-dapr service via dapr sidecars.
 Findings:
 
 * Using dapr is 4.7 times slower than direct calls for grpc and 2.1 times slower for http calls using the sdk.
