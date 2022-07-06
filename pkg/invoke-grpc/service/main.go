@@ -17,6 +17,8 @@ import (
 	pb "github.com/wostzone/echo/proto/go"
 )
 
+var echoService = internal.NewEchoService(nil)
+
 // Entry point of the grpc echo service
 func main() {
 	var port int
@@ -91,14 +93,14 @@ func stopInvocationHandler(ctx context.Context, in *common.InvocationEvent) (out
 func echoInvocationHandler(ctx context.Context, in *common.InvocationEvent) (out *common.Content, err error) {
 	var args *pb.TextParam
 	var response []byte
-	log.Printf("echo - ContentType:%s, Verb:%s, QueryString:%s, %+v", in.ContentType, in.Verb, in.QueryString, string(in.Data))
+	//log.Printf("echo - ContentType:%s, Verb:%s, QueryString:%s, %+v", in.ContentType, in.Verb, in.QueryString, string(in.Data))
 	// shouldn't this be protobuf encoded?
 	err = json.Unmarshal(in.Data, &args)
 	if err != nil {
 		err := fmt.Errorf("Error unmarshalling payload for handleEcho: %s", err)
 		return nil, err
 	}
-	echoService := internal.NewEchoService(nil)
+	//echoService := internal.NewEchoService(nil)
 	result, err := echoService.Echo(nil, args)
 	if err != nil {
 		err = fmt.Errorf("Error handling echo request: %s", err)
@@ -119,14 +121,14 @@ func echoInvocationHandler(ctx context.Context, in *common.InvocationEvent) (out
 func upperInvocationHandler(ctx context.Context, in *common.InvocationEvent) (out *common.Content, err error) {
 	var args *pb.TextParam
 	var response []byte
-	log.Printf("echo - ContentType:%s, Verb:%s, QueryString:%s, %+v", in.ContentType, in.Verb, in.QueryString, string(in.Data))
+	//log.Printf("echo - ContentType:%s, Verb:%s, QueryString:%s, %+v", in.ContentType, in.Verb, in.QueryString, string(in.Data))
 	// shouldn't this be protobuf encoded?
 	err = json.Unmarshal(in.Data, &args)
 	if err != nil {
 		err := fmt.Errorf("Error unmarshalling payload for handleEcho: %s", err)
 		return nil, err
 	}
-	echoService := internal.NewEchoService(nil)
+	//echoService := internal.NewEchoService(nil)
 	result, err := echoService.UpperCase(nil, args)
 	if err != nil {
 		err = fmt.Errorf("Error handling echo request: %s", err)

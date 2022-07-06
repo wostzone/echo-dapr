@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/gorilla/mux"
 
@@ -43,7 +44,11 @@ func StartHttpService(port int) {
 
 func handleStop(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Stopping plain-http service")
-	go os.Exit(0)
+	go func() {
+		time.Sleep(1)
+		os.Exit(0)
+	}()
+	return
 }
 
 func handleEcho(w http.ResponseWriter, r *http.Request) {
@@ -60,7 +65,7 @@ func handleEcho(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(500)
 		return
 	}
-	log.Println("handleEcho: Received 'echo' request over http")
+	//log.Println("handleEcho: Received 'echo' request over http")
 	echoService := internal.NewEchoService(nil)
 	result, err := echoService.Echo(nil, args)
 	if err != nil {
@@ -73,7 +78,7 @@ func handleEcho(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleReverse(w http.ResponseWriter, r *http.Request) {
-	log.Println("handleReverse: Received 'reverse' request over http")
+	//log.Println("handleReverse: Received 'reverse' request over http")
 	var args *pb.TextParam
 	data, err := ioutil.ReadAll(r.Body)
 
@@ -90,7 +95,7 @@ func handleReverse(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleUpper(w http.ResponseWriter, r *http.Request) {
-	log.Println("handleUpper: Received 'upper' request over http")
+	//log.Println("handleUpper: Received 'upper' request over http")
 
 	var args *pb.TextParam
 	data, err := ioutil.ReadAll(r.Body)

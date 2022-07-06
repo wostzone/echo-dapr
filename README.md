@@ -35,16 +35,32 @@ See each of the demo README's for details
 
 Completed:
 
-* invoke-grpc/README.md) - invoke service with grpc with/without dapr
-* invoke-http/README.md - invoke service with http with/without dapr
-
-In progress:
-
-* invoke-dapr-grpc/README.md - invoke service with grpc using dapr golang SDK
-* invoke-http-grpc/README.md - invoke service with http using dapr golang SDK
+* [plain-grpc/README.md](pkg/plain-grpc/README.md) - client-service echo with grpc
+* [plain-http/README.md](pkg/plain-http/README.md) - client-service echo with http
+* [invoke-grpc/README.md](pkg/invoke-grpc/README.md) - invoke service with grpc using dapr SDK
+* [invoke-http/README.md](pkg/invoke-http/README.md) - invoke service with http using dapr SDK
 
 Planned:
 
 * pubsub-grpc/README.md - invoke service with pubsub over grpc
 * pubsub-http/README.md - invoke service with pubsub over http
-* invoke-grpc-http/README.md - invoke the grpc service via http
+
+## Performance
+
+This is a very simplistic performance test comparing invocation times using best out of 3 runs.
+
+| Makefile | test                         | duration  |
+|----------|------------------------------|-----------|
+| run1     | 1000 plain grpc calls        | 164 msec  |
+| run2     | 1000 plain http calls        | 320 msec  |
+| run3     | 1000 dapr wrapped grpc calls | 986 msec  |
+| run4     | 1000 dapr wrapped http calls | 824 msec  |
+| run5     | 1000 grpc sdk calls          | 772 msec  |
+| run6     | 1000 http sdk calls          | 700 msec  |
+
+'wrapped calls' invoke the plain non-dapr service via dapr sidecars.
+Findings:
+
+* Using dapr is 4.7 times slower than direct calls for grpc and 2.1 times slower for http calls using the sdk.
+* Using the dapr SDK improves performance over the wrapped calls by roughly 20% for grpc and 15% for http.
+* Grpc calls via dapr sidecars are slower than http calls by 10% when using the SDK and 15% when using wrapped calls.

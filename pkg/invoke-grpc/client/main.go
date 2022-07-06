@@ -65,6 +65,7 @@ func InvokeGrpcServiceWithSDK(appID string, cmd string, text string, repeat int)
 			msg := fmt.Sprintf("Error invoking method '%s' on app '%s': %s", cmd, appID, err)
 			log.Println(msg)
 		}
+		_ = resp
 		fmt.Println("Response:", string(resp))
 	}
 	t2 := time.Now()

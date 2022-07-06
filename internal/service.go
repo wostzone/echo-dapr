@@ -25,7 +25,7 @@ func (service *EchoService) Echo(ctx context.Context, args *pb.TextParam) (*pb.T
 	if args == nil {
 		return nil, fmt.Errorf("Missing args")
 	}
-	fmt.Println("EchoService.Echo: ", args.Text)
+	//fmt.Println("EchoService.Echo: ", args.Text)
 	return args, nil
 }
 
@@ -35,7 +35,7 @@ func (service *EchoService) UpperCase(ctx context.Context, args *pb.TextParam) (
 	}
 	upper := strings.ToUpper(args.Text)
 	response := pb.TextParam{Text: upper}
-	fmt.Println("EchoService.UpperCase: ", response.Text)
+	//fmt.Println("EchoService.UpperCase: ", response.Text)
 	return &response, nil
 }
 
@@ -48,7 +48,7 @@ func (service *EchoService) Reverse(ctx context.Context, args *pb.TextParam) (*p
 		rns[i], rns[j] = rns[j], rns[i]
 	}
 	response := pb.TextParam{Text: string(rns)}
-	fmt.Println("EchoService.Reverse: ", response.Text)
+	//fmt.Println("EchoService.Reverse: ", response.Text)
 	return &response, nil
 }
 

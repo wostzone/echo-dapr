@@ -68,7 +68,7 @@ func stopInvocationHandler(ctx context.Context, in *common.InvocationEvent) (out
 func echoInvocationHandler(ctx context.Context, in *common.InvocationEvent) (out *common.Content, err error) {
 	var args *pb.TextParam
 	var response []byte
-	log.Printf("echo - ContentType:%s, Verb:%s, QueryString:%s, %+v", in.ContentType, in.Verb, in.QueryString, string(in.Data))
+	//log.Printf("echo - ContentType:%s, Verb:%s, QueryString:%s, %+v", in.ContentType, in.Verb, in.QueryString, string(in.Data))
 	err = json.Unmarshal(in.Data, &args)
 	if err != nil {
 		err := fmt.Errorf("Error unmarshalling payload for handleEcho: %s", err)
@@ -94,7 +94,7 @@ func echoInvocationHandler(ctx context.Context, in *common.InvocationEvent) (out
 
 // http style handler
 func handleReverse(w http.ResponseWriter, r *http.Request) {
-	log.Println("handleReverse: Received 'reverse' request over http")
+	//log.Println("handleReverse: Received 'reverse' request over http")
 	var args *pb.TextParam
 	data, err := ioutil.ReadAll(r.Body)
 
@@ -111,7 +111,7 @@ func handleReverse(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleUpper(w http.ResponseWriter, r *http.Request) {
-	log.Println("handleUpper: Received 'upper' request over http")
+	//log.Println("handleUpper: Received 'upper' request over http")
 
 	var args *pb.TextParam
 	data, err := ioutil.ReadAll(r.Body)
