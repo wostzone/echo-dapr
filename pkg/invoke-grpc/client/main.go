@@ -60,13 +60,14 @@ func InvokeGrpcServiceWithSDK(appID string, cmd string, text string, repeat int)
 	ctx := context.Background()
 	t1 := time.Now()
 	for count := 0; count < repeat; count++ {
+		//content.Data = []byte(string(data) + "-" + strconv.Itoa(count))
 		resp, err := client.InvokeMethodWithContent(ctx, appID, cmd, "post", content)
 		if err != nil {
 			msg := fmt.Sprintf("Error invoking method '%s' on app '%s': %s", cmd, appID, err)
 			log.Println(msg)
 		}
 		_ = resp
-		fmt.Println("Response:", string(resp))
+		//fmt.Println("Response:", string(resp))
 	}
 	t2 := time.Now()
 	duration := t2.Sub(t1)

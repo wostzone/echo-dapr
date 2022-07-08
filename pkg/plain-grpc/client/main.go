@@ -86,7 +86,7 @@ func InvokeGrpcService(port int, appID string, cmd string, text string, repeat i
 		if err != nil {
 			log.Fatalf("Could not echo text: %v", err)
 		} else if response != nil {
-			fmt.Println("Response: ", response.GetText())
+			//fmt.Println("Response: ", response.GetText())
 		}
 	}
 	t2 := time.Now()

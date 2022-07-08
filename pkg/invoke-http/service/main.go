@@ -20,6 +20,8 @@ import (
 	pb "github.com/wostzone/echo/proto/go"
 )
 
+var echoService = internal.NewEchoService(nil)
+
 // Entry point of the http echo service
 func main() {
 	var port int
@@ -66,21 +68,30 @@ func stopInvocationHandler(ctx context.Context, in *common.InvocationEvent) (out
 
 // echoInvocationHandler uses the dapr invocation API. It is just another way to handle request/response
 func echoInvocationHandler(ctx context.Context, in *common.InvocationEvent) (out *common.Content, err error) {
-	var args *pb.TextParam
+	var args *pb.TextParam = &pb.TextParam{}
 	var response []byte
+	var withMarshal = true
+	args.Text = string(in.Data)
+
+	// disable unmarshal/marshal to test the performance impact. Larger payloads expect 30%  slowdown
 	//log.Printf("echo - ContentType:%s, Verb:%s, QueryString:%s, %+v", in.ContentType, in.Verb, in.QueryString, string(in.Data))
-	err = json.Unmarshal(in.Data, &args)
-	if err != nil {
-		err := fmt.Errorf("Error unmarshalling payload for handleEcho: %s", err)
-		return nil, err
+	if withMarshal {
+		err = json.Unmarshal(in.Data, &args)
+		if err != nil {
+			err := fmt.Errorf("Error unmarshalling payload for handleEcho: %s", err)
+			return nil, err
+		}
 	}
-	echoService := internal.NewEchoService(nil)
 	result, err := echoService.Echo(nil, args)
 	if err != nil {
 		err = fmt.Errorf("Error handling echo request: %s", err)
 		return nil, err
 	} else {
-		response, _ = json.Marshal(result)
+		_ = result
+		response = []byte(result.Text)
+		if withMarshal {
+			response, _ = json.Marshal(result)
+		}
 	}
 
 	// do something with the invocation here
@@ -99,7 +110,6 @@ func handleReverse(w http.ResponseWriter, r *http.Request) {
 	data, err := ioutil.ReadAll(r.Body)
 
 	json.Unmarshal(data, &args)
-	echoService := internal.NewEchoService(nil)
 	result, err := echoService.Reverse(nil, args)
 	if err != nil {
 		log.Println("Error handling reverse request:", err)
@@ -116,7 +126,6 @@ func handleUpper(w http.ResponseWriter, r *http.Request) {
 	var args *pb.TextParam
 	data, err := ioutil.ReadAll(r.Body)
 	json.Unmarshal(data, &args)
-	echoService := internal.NewEchoService(nil)
 	result, err := echoService.UpperCase(nil, args)
 	if err != nil {
 		log.Println("Error handling upper request: ", err)

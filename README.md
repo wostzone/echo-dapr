@@ -47,7 +47,7 @@ Planned:
 
 ## Performance
 
-This is a very simplistic performance test comparing invocation times using best out of 3 runs.
+This is a very simplistic performance test comparing 'echo' invocation times using best out of 5 runs.
 
 There are 3 types of tests, each with grpc and http:
 
@@ -55,17 +55,29 @@ There are 3 types of tests, each with grpc and http:
 * dapr wrapped calls use dapr sidecars with plain client and server. Eg: client -> sidecar -> sidecar -> service
 * in sdk calls the client and service use the dapr sdk to invoke and receive messages. This integration adds a dependency on the dapr sdk in return for perfomance gains and simplified port management.
 
-| Makefile | test                         | duration  |
-|----------|------------------------------|-----------|
-| run1     | 1000 plain grpc calls        | 164 msec  |
-| run2     | 1000 plain http calls        | 320 msec  |
-| run3     | 1000 dapr wrapped grpc calls | 986 msec  |
-| run4     | 1000 dapr wrapped http calls | 824 msec  |
-| run5     | 1000 grpc sdk calls          | 772 msec  |
-| run6     | 1000 http sdk calls          | 700 msec  |
+Durations with small payload: {"Text": "Hello world"} with printing of the result disabled. (adds up to 40msec)
+The duration only includes the time to make the call and does not include the time to startup dapr and the test.
+
+| Makefile | test                         | Hello world | 1K text      | 10K text     | 100K text      |
+|----------|------------------------------|-------------|--------------|--------------|----------------|
+| run1     | 1000 plain grpc calls        | 150 msec    | 150 msec     | 200 msec     | 550 msec       |
+| run2     | 1000 plain http calls        | 320 msec    | 355 msec     | 520 msec     | 2050 msec      |
+| run3     | 1000 dapr wrapped grpc calls | 970 msec    | 980 msec     | 1110 msec    | fails (*1)     |
+| run4     | 1000 dapr wrapped http calls | 810 msec    | 820 msec     | 1110 msec    | 3160 msec      |
+| run5     | 1000 grpc sdk calls          | 760 msec    | 760 msec     | 980 msec     | 3230 msec      |
+| run6     | 1000 http sdk calls          | 690 msec    | 700/685 msec | 960/800 msec | 3120/1830 msec |
+
+*1  (93K message size succeeds with duration 1980 msec for 1000 calls, anything over 93K sec fails with context deadline exceeded. Looks like a timeout at the 2msec mark)
 
 Findings:
 
-* Using dapr is 4.7 times slower than direct calls for grpc and 2.1 times slower for http calls using the sdk.
-* Using the dapr SDK improves performance over the wrapped calls by roughly 20% for grpc and 15% for http.
-* Grpc calls via dapr sidecars are slower than http calls by 10% when using the SDK and 15% when using wrapped calls.
+* Durations vary by up to 10%
+* For small messages < 1K
+  * using dapr is 4.5 times slower than direct calls for grpc and 2.1 times slower for http calls using the sdk.
+  * Using the dapr SDK improves performance over the wrapped calls by roughly 20% for grpc and 15% for http.
+  * Grpc calls via dapr sidecars are slower than http calls by 10% when using the SDK and 15% when using wrapped calls.
+* For larger messages 100K the difference between dapr based calls
+  * using dapr is still 4.5 times slower than direct calls for gRPC.
+  * the performance gap between plain gRPC and http messages widens. Most likely due to compression in gRPC.
+  * dapr performance differences disappear. Each message takes roughly 3 msec.
+* run 2, run4, run5, run6 all use json unmarshal to decode the payload and json marshal to encode it. At larger payloads this really starts to slow things down. The second number in run6 is without marshalling the payload.

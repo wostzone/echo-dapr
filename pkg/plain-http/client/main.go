@@ -72,7 +72,8 @@ func InvokeHttpService(port int, appID string, cmd string, text string, repeat i
 		if err != nil {
 			log.Fatal(err)
 		}
-		log.Println("Result: ", string(result))
+		_ = result
+		//log.Println("Result: ", string(result))
 	}
 	t2 := time.Now()
 	duration := t2.Sub(t1)
