@@ -28,6 +28,7 @@ Project structure :
 
 * Self hosted installation of dapr
 * Golang 1.18 or newer
+* protoc installed
 
 ## Demos
 
@@ -73,11 +74,11 @@ Findings:
 
 * Durations vary by up to 10%
 * For small messages < 1K
-  * using dapr is 4.5 times slower than direct calls for grpc and 2.1 times slower for http calls using the sdk.
-  * Using the dapr SDK improves performance over the wrapped calls by roughly 20% for grpc and 15% for http.
-  * Grpc calls via dapr sidecars are slower than http calls by 10% when using the SDK and 15% when using wrapped calls.
+    * using dapr is 4.5 times slower than direct calls for grpc and 2.1 times slower for http calls using the sdk.
+    * Using the dapr SDK improves performance over the wrapped calls by roughly 20% for grpc and 15% for http.
+    * Grpc calls via dapr sidecars are slower than http calls by 10% when using the SDK and 15% when using wrapped calls.
 * For larger messages 100K the difference between dapr based calls
-  * using dapr is still 4.5 times slower than direct calls for gRPC.
-  * the performance gap between plain gRPC and http messages widens. Most likely due to compression in gRPC.
-  * dapr performance differences disappear. Each message takes roughly 3 msec.
+    * using dapr is still 4.5 times slower than direct calls for gRPC.
+    * the performance gap between plain gRPC and http messages widens. Most likely due to compression in gRPC.
+    * dapr performance differences disappear. Each message takes roughly 3 msec.
 * run 2, run4, run5, run6 all use json unmarshal to decode the payload and json marshal to encode it. At larger payloads this really starts to slow things down. The second number in run6 is without marshalling the payload.

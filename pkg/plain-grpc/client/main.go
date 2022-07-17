@@ -28,9 +28,9 @@ func main() {
 	var text = "Hello echo"
 	var appID = pkg.EchoServiceAppID
 	var cmd string
-	var port int
+	var address string = ":" + strconv.Itoa(pkg.EchoServiceGrpcPort)
 	var repeat int = 1
-	flag.IntVar(&port, "port", pkg.EchoServiceGrpcPort, "Service gRPC listening port")
+	flag.StringVar(&address, "addr", address, "Service gRPC address:port")
 	flag.StringVar(&appID, "app-id", pkg.EchoServiceAppID, "Service name when using dapr")
 	flag.IntVar(&repeat, "repeat", repeat, "Nr of times to invoke")
 	flag.Parse()
@@ -46,24 +46,24 @@ func main() {
 		return
 	}
 
-	InvokeGrpcService(port, appID, cmd, text, repeat)
+	InvokeGrpcService(address, appID, cmd, text, repeat)
+	time.Sleep(time.Second)
 }
 
 // InvokeGrpcService invokes the service using grpc
-func InvokeGrpcService(port int, appID string, cmd string, text string, repeat int) {
+func InvokeGrpcService(address string, appID string, cmd string, text string, repeat int) {
 	var response *pb.TextParam
-	listenAddress := fmt.Sprintf(":%d", port)
 
-	// Set up a connection to the server.
-	fmt.Println("Connecting to service '"+appID+"' on", listenAddress)
-	conn, err := grpc.Dial(listenAddress, grpc.WithInsecure(), grpc.WithBlock())
+	// Set up a connection to the server. Max 200 second test run
+	fmt.Println("Connecting to service '"+appID+"' on", address)
+	conn, err := grpc.Dial(address, grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
 		log.Fatalf("did not connect: %v", err)
 	}
 	defer conn.Close()
 	c := pb.NewEchoServiceClient(conn)
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*2)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*200)
 	defer cancel()
 
 	// The service name to connect to when connecting via dapr

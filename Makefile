@@ -19,24 +19,27 @@ TEST_PAYLOAD=$(shell cat test/payload-1K.txt)
 
 .FORCE:
 
+# protobuf source file generation, if needed
 proto: .FORCE  ## Compile hub protobuffer files for go
+	go get google.golang.org/protobuf/cmd/protoc-gen-go@latest
+	go get google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 	$(PROTOC) proto/echo.proto
 	go mod tidy
 
 
-invoke-grpc: proto ## Compile the echo invoke grpc client and service
+invoke-grpc:  ## Compile the echo invoke grpc client and service
 	go build -o bin/invoke-grpc-service pkg/invoke-grpc/service/main.go
 	go build -o bin/invoke-grpc-client pkg/invoke-grpc/client/main.go
 
-invoke-http: proto ## Compile the echo invoke http client and service
+invoke-http:  ## Compile the echo invoke http client and service
 	go build -o bin/invoke-http-service pkg/invoke-http/service/main.go
 	go build -o bin/invoke-http-client pkg/invoke-http/client/main.go
 
-pubsub-grpc: proto  ## Compile the echo pub/sub grpc client and service
+pubsub-grpc:   ## Compile the echo pub/sub grpc client and service
 	go build -o bin/pubsub-grpc-service pkg/pubsub-grpc/service/main.go
 	go build -o bin/pubsub-grpc-client pkg/pubsub-grpc/client/main.go
 
-pubsub-http: proto  ## Compile the echo pub/sub http client and service
+pubsub-http:   ## Compile the echo pub/sub http client and service
 	go build -o bin/pubsub-http-service pkg/pubsub-http/service/main.go
 	go build -o bin/pubsub-http-client pkg/pubsub-http/client/main.go
 
@@ -69,6 +72,21 @@ run3: ## Run echo gRPC service with dapr sidecars
 		go run pkg/plain-grpc/client/main.go --port 9002 --repeat 1000 $(TEST_COMMAND) "$(TEST_PAYLOAD)"
 	go run pkg/plain-grpc/client/main.go "stop"
 
+run3prof: ## As run3 but with profiling enabled
+	dapr run --app-protocol grpc --app-port 40001 \
+		--enable-profiling --profile-port 7777 \
+		--app-id echo --dapr-grpc-port 9001 \
+		-- go run pkg/plain-grpc/service/main.go --port 40001&
+	#curl http://localhost:7777/debug/pprof/profile?seconds=120 > service.pprof &
+	for n in {1..10}; do \
+		dapr run --app-id echoclient --dapr-grpc-port=9002 \
+			--enable-profiling --profile-port 7778 \
+			-- go run pkg/plain-grpc/client/main.go --port 9002 --repeat 1000 $(TEST_COMMAND) "$(TEST_PAYLOAD)" && \
+			 sleep 1; \
+	done
+
+	go run pkg/plain-grpc/client/main.go "stop"
+
 run4: ## Run echo http service with dapr sidecars
 	dapr run --app-protocol http --app-port 40002 \
 		--app-id echo --dapr-http-port 9003 \
@@ -77,7 +95,7 @@ run4: ## Run echo http service with dapr sidecars
 		go run pkg/plain-http/client/main.go --port 9004 --repeat 1000 $(TEST_COMMAND) "$(TEST_PAYLOAD)"
 	go run pkg/plain-http/client/main.go "stop"
 
-run5: ## Run echo gRPC service with invoke SDK
+run5: ## Run echo gRPC service with invoke SDK (not recommended use)
 	dapr run --app-protocol grpc --app-port 40001 \
 		--app-id echo --dapr-grpc-port 9001 -- \
 		go run pkg/invoke-grpc/service/main.go --port 40001&
@@ -86,7 +104,7 @@ run5: ## Run echo gRPC service with invoke SDK
 	dapr run --dapr-grpc-port=9002  -- \
     	go run pkg/invoke-grpc/client/main.go "stop" >/dev/null
 
-run6: ## Run echo http service with invoke SDK
+run6: ## Run echo http service with invoke SDK (not recommended use)
 	dapr run --app-protocol http --app-port 40002 \
 		--app-id echo --dapr-http-port 9003 \
 		-- go run pkg/invoke-http/service/main.go --port 40002&
